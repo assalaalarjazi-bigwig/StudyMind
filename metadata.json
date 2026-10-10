@@ -1,0 +1,6 @@
+{
+  "name": "StudyMind",
+  "description": "Turn your study materials into an interactive learning experience with grounded Q&A, active-recall flashcards, practice quizzes, and multimodal visual diagrams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

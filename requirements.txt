@@ -1,0 +1,23 @@
+# StudyMind - Python Dependencies
+# Primary Stack: Python 3.10+, Streamlit, Google Gemini API, SQLite, ChromaDB
+
+# UI and Frontend Framework
+streamlit>=1.38.0
+
+# Google Gemini Official Modern SDK
+google-genai>=2.4.0
+
+# Document Ingestion & Extraction (PDF, DOCX)
+pymupdf>=1.24.0          # Fast PDF parser with page/coordinate/image extraction
+python-docx>=1.1.0       # Microsoft Word parser
+Pillow>=10.3.0           # Image and diagram processing for multimodal Gemini
+
+# Vector Database (Embedded / Local-first)
+chromadb>=0.5.0          # In-process vector database with persistent storage
+
+# Data Validation & Typing
+pydantic>=2.8.0          # Structured JSON output validation for quizzes and cards
+
+# Resilience & Testing
+tenacity>=8.3.0          # Exponential backoff for Gemini API rate limits
+pytest>=8.2.0            # Unit and integration test runner
