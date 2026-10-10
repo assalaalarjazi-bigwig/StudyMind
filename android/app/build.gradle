@@ -34,3 +34,20 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.webkit:webkit:1.10.0'
 }
+
+// Verification task ensuring web assets are present before Gradle APK compilation
+tasks.register('checkWebAssets') {
+    doLast {
+        File indexHtml = file("src/main/assets/index.html")
+        File assetsDir = file("src/main/assets/assets")
+        if (!indexHtml.exists() || !assetsDir.exists()) {
+            throw new GradleException("Missing web assets! Please run 'npm run build:android' so dist files are synced to android/app/src/main/assets.")
+        } else {
+            println("Verification passed: Web assets (index.html, JS, CSS) packaged in android/app/src/main/assets/")
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith("assemble") || it.name.startsWith("bundle") }.configureEach {
+    dependsOn 'checkWebAssets'
+}
