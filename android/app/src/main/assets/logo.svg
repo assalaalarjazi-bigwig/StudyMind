@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#1e40af" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- Subtle Inner Ring Highlight -->
+  <rect x="12" y="12" width="488" height="488" rx="116" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" />
+
+  <!-- Central Emblem with Shadow -->
+  <g filter="url(#shadow)" transform="translate(0, 8)">
+    <!-- Stylized Open Book / Wings of Knowledge -->
+    <!-- Left Page -->
+    <path d="M256 360 C210 320 140 320 100 334 C94 336 90 342 90 348 L90 200 C90 192 96 186 104 184 C146 172 210 176 256 216 Z"
+          fill="#ffffff" fill-opacity="0.95" />
+    <!-- Right Page -->
+    <path d="M256 360 C302 320 372 320 412 334 C418 336 422 342 422 348 L422 200 C422 192 416 186 408 184 C366 172 302 176 256 216 Z"
+          fill="#ffffff" fill-opacity="0.95" />
+
+    <!-- Left Page Inner Accent Lines -->
+    <path d="M125 220 C165 210 215 218 240 240" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+    <path d="M125 255 C165 245 215 253 240 275" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+    <path d="M125 290 C165 280 215 288 240 310" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+
+    <!-- Right Page Inner Accent Lines -->
+    <path d="M387 220 C347 210 297 218 272 240" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+    <path d="M387 255 C347 245 297 253 272 275" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+    <path d="M387 290 C347 280 297 288 272 310" stroke="#0284c7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.8" />
+
+    <!-- Central Neural Spine / Stem -->
+    <line x1="256" y1="365" x2="256" y2="185" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" />
+
+    <!-- Neural Constellation & Connecting Nodes -->
+    <!-- Center Node -->
+    <circle cx="256" cy="180" r="14" fill="#38bdf8" />
+    <!-- Upper Left Node -->
+    <circle cx="190" cy="130" r="11" fill="#818cf8" />
+    <!-- Upper Right Node -->
+    <circle cx="322" cy="130" r="11" fill="#818cf8" />
+    <!-- Connection lines -->
+    <line x1="256" y1="180" x2="190" y2="130" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" opacity="0.9" />
+    <line x1="256" y1="180" x2="322" y2="130" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" opacity="0.9" />
+    <line x1="190" y1="130" x2="256" y2="90" stroke="#818cf8" stroke-width="5" stroke-linecap="round" opacity="0.8" />
+    <line x1="322" y1="130" x2="256" y2="90" stroke="#818cf8" stroke-width="5" stroke-linecap="round" opacity="0.8" />
+
+    <!-- Shining Apex Star of Wisdom / Spark -->
+    <path d="M256 65 L263 82 L280 89 L263 96 L256 113 L249 96 L232 89 L249 82 Z" fill="url(#goldGrad)" />
+    <circle cx="256" cy="89" r="4" fill="#ffffff" />
+  </g>
+</svg>

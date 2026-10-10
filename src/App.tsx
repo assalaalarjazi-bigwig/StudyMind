@@ -169,6 +169,28 @@ export default function App() {
     }
   }, [isDark]);
 
+  // Online / Offline Connectivity State
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      addToast('success', isAr ? 'تم استعادة الاتصال بالإنترنت بنجاح!' : 'Connected to the internet!');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      addToast('info', isAr ? 'أنت في وضع عدم الاتصال (جميع مستنداتك وموادك الدراسية محفوظة محلياً بالكامل).' : 'You are in offline mode (all materials remain saved locally).');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isAr]);
+
   // Navigation (Workspace, Library, Learning Analytics)
   const [activeNav, setActiveNav] = useState<'workspace' | 'library' | 'analytics'>('workspace');
   const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'flashcards' | 'quiz' | 'figures'>('chat');
@@ -649,6 +671,29 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Online / Offline Connectivity Indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold transition-colors ${
+                isOnline
+                  ? isDark
+                    ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : isDark
+                    ? 'bg-amber-950/40 text-amber-300 border-amber-800/60'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}
+              title={
+                isOnline
+                  ? (isAr ? 'متصل بالإنترنت — توليد المحتوى والذكاء الاصطناعي متوفر' : 'Online — AI generation enabled')
+                  : (isAr ? 'وضع غير متصل — كافة مستنداتك واختباراتك محفوظة ومتاحة محلياً' : 'Offline — All materials saved locally')
+              }
+            >
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className="hidden xs:inline">
+                {isOnline ? (isAr ? 'متصل' : 'Online') : (isAr ? 'محفوظ محلياً' : 'Saved Locally')}
+              </span>
+            </div>
+
             {/* Dark Mode Theme Toggle */}
             <button
               onClick={() => setIsDark(!isDark)}

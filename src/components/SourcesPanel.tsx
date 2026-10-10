@@ -30,12 +30,12 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
   return (
     <div className={`${isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'} rounded-2xl border p-4 shadow-xs space-y-3 transition-colors`}>
       {/* Primary Bar: Active Source & Quick Action Buttons */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
           <div className={`w-10 h-10 rounded-xl ${isDark ? 'bg-blue-950/60 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'} border flex items-center justify-center shrink-0`}>
             <BookOpen className="w-5 h-5" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 {isArabic ? 'المستند الدراسي النشط' : 'Active Study Source'}
@@ -44,14 +44,14 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
                 {activeDoc.pageCount} {isArabic ? 'صفحة فعلية' : 'Exact Pages'}
               </span>
             </div>
-            <h2 className={`font-bold text-sm sm:text-base truncate mt-0.5 ${isDark ? 'text-slate-100' : 'text-slate-900'}`} title={activeDoc.filename}>
+            <h2 className={`font-bold text-sm sm:text-base truncate mt-0.5 block ${isDark ? 'text-slate-100' : 'text-slate-900'}`} title={activeDoc.filename}>
               {activeDoc.filename}
             </h2>
           </div>
         </div>
 
         {/* Buttons to Upload and Switch Files */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
           <button
             onClick={onTriggerUpload}
             disabled={isUploading}
