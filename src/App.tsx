@@ -27,6 +27,7 @@ import { DiagramsView } from './components/DiagramsView';
 import { GroundedChatView } from './components/GroundedChatView';
 import { SummaryView } from './components/SummaryView';
 import { BrandLogo } from './components/BrandLogo';
+import { WeakConceptsModal } from './components/WeakConceptsModal';
 
 // Initial Seed Documents with real technical text
 const INITIAL_DOCUMENTS: DocumentItem[] = [
@@ -271,7 +272,23 @@ export default function App() {
   const [isGeneratingDiagrams, setIsGeneratingDiagrams] = useState(false);
 
   // Analytics Weak Concepts
-  const [weakConcepts, setWeakConcepts] = useState<string[]>(['Slow Start Growth', 'AIMD Sawtooth Dynamics']);
+  const [isWeakConceptsModalOpen, setIsWeakConceptsModalOpen] = useState(false);
+  const [weakConcepts, setWeakConcepts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_weak_concepts');
+      return saved ? JSON.parse(saved) : [
+        'Slow Start Growth (نمو البدء البطيء)',
+        'AIMD Sawtooth Dynamics (ديناميكية سن المنشار)',
+        'Packet Loss Retransmission (إعادة إرسال الحزم وتحديد الازدحام)'
+      ];
+    } catch {
+      return [
+        'Slow Start Growth (نمو البدء البطيء)',
+        'AIMD Sawtooth Dynamics (ديناميكية سن المنشار)',
+        'Packet Loss Retransmission (إعادة إرسال الحزم وتحديد الازدحام)'
+      ];
+    }
+  });
   const [customConceptInput, setCustomConceptInput] = useState<string>('');
 
   // Sync to localStorage
@@ -279,10 +296,11 @@ export default function App() {
     try {
       localStorage.setItem('studymind_docs', JSON.stringify(documents));
       localStorage.setItem('studymind_active_doc', activeDocId);
+      localStorage.setItem('studymind_weak_concepts', JSON.stringify(weakConcepts));
     } catch (e) {
       console.warn('LocalStorage save failed:', e);
     }
-  }, [documents, activeDocId]);
+  }, [documents, activeDocId, weakConcepts]);
 
   // When activeDocId changes, load initial materials for that document
   useEffect(() => {
@@ -639,6 +657,52 @@ export default function App() {
         isArabic={isAr}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDocToDelete(null)}
+      />
+
+      {/* Weak Concepts Interactive Hub Modal */}
+      <WeakConceptsModal
+        isOpen={isWeakConceptsModalOpen}
+        isArabic={isAr}
+        isDark={isDark}
+        weakConcepts={weakConcepts}
+        activeDocFilename={activeDoc.filename}
+        onClose={() => setIsWeakConceptsModalOpen(false)}
+        onTestConcept={(concept) => {
+          setActiveNav('workspace');
+          setActiveTab('quiz');
+          setQuizDifficultyChoice('adaptive');
+          generateQuizForDoc(activeDoc, 5, 'adaptive');
+          addToast('success', isAr ? `تم إعداد اختبار تكيفي مركز لتقوية: ${concept}` : `Prepared quiz for: ${concept}`);
+        }}
+        onChatExplain={(concept) => {
+          setActiveNav('workspace');
+          setActiveTab('chat');
+          const query = isAr
+            ? `اشرح لي بالتفصيل مفهوم "${concept}" من واقع المستند الحالي، وما هي أهم النقاط التي يجب أن أركز عليها لتجنب الخطأ فيه في الاختبارات؟`
+            : `Explain the concept "${concept}" in detail based on this document and key points for exams.`;
+          handleSendMessage(query);
+        }}
+        onViewDiagrams={() => {
+          setActiveNav('workspace');
+          setActiveTab('figures');
+        }}
+        onMarkMastered={(concept) => {
+          setWeakConcepts((prev) => prev.filter((c) => c !== concept));
+          addToast('success', isAr ? `أحسنت! تم إتقان مفهوم: ${concept}` : `Mastered: ${concept}`);
+        }}
+        onRetestAll={() => {
+          setActiveNav('workspace');
+          setActiveTab('quiz');
+          setQuizDifficultyChoice('adaptive');
+          generateQuizForDoc(activeDoc, Math.max(3, weakConcepts.length * 2), 'adaptive');
+          addToast('success', isAr ? 'تم بدء اختبار تكيفي يركز على مفاهيمك الضعيفة' : 'Starting adaptive quiz for weak concepts');
+        }}
+        onAddConcept={(concept) => {
+          if (!weakConcepts.includes(concept)) {
+            setWeakConcepts((prev) => [...prev, concept]);
+            addToast('info', isAr ? `تمت إضافة المفهوم: ${concept}` : `Added concept: ${concept}`);
+          }
+        }}
       />
 
       {/* Hidden File Input for Direct Local Uploading */}
@@ -1102,6 +1166,7 @@ export default function App() {
 
                 <div
                   onClick={() => {
+                    setIsWeakConceptsModalOpen(true);
                     const el = window.document.getElementById('weak-concepts-hub');
                     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
@@ -1111,12 +1176,15 @@ export default function App() {
                     <span className="text-xs font-bold text-slate-400 uppercase">
                       {isAr ? 'المفاهيم التي تحتاج لتقوية' : 'Identified Weak Areas'}
                     </span>
-                    <span className="text-[11px] text-amber-500 font-semibold group-hover:underline">
-                      {isAr ? 'استعراض ونقل ➔' : 'Review & Practice ➔'}
+                    <span className="text-[11px] text-amber-500 font-semibold group-hover:underline flex items-center gap-1">
+                      <span>{isAr ? 'عرض التفاصيل واختبار ➔' : 'Review & Practice ➔'}</span>
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-amber-500 mt-1">
                     {weakConcepts.length} {isAr ? 'مفاهيم' : 'concepts'}
+                  </p>
+                  <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
+                    {isAr ? 'انقر لفتح واستعراض النقاط الضعيفة واختبارها فورياً' : 'Click to view weak points and test directly'}
                   </p>
                 </div>
               </div>
