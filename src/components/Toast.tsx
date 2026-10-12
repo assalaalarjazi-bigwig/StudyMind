@@ -50,21 +50,22 @@ export const DeleteConfirmModal: React.FC<{
   isOpen: boolean;
   docTitle: string;
   isArabic: boolean;
+  isDark?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-}> = ({ isOpen, docTitle, isArabic, onConfirm, onCancel }) => {
+}> = ({ isOpen, docTitle, isArabic, isDark = false, onConfirm, onCancel }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-150">
-        <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+      <div className={`${isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'} rounded-2xl max-w-md w-full p-6 shadow-2xl border animate-in fade-in zoom-in duration-150`}>
+        <div className={`w-12 h-12 rounded-xl ${isDark ? 'bg-red-950/60 text-red-400' : 'bg-red-100 text-red-600'} flex items-center justify-center mx-auto mb-4`}>
           <Trash2 className="w-6 h-6" />
         </div>
-        <h3 className="text-lg font-bold text-center text-slate-900">
+        <h3 className={`text-lg font-bold text-center ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
           {isArabic ? 'تأكيد حذف المستند الدراسي' : 'Confirm Document Deletion'}
         </h3>
-        <p className="text-xs text-slate-500 text-center mt-2 leading-relaxed">
+        <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} text-center mt-2 leading-relaxed`}>
           {isArabic
             ? `هل أنت متأكد من رغبتك في حذف "${docTitle}"؟ سيتم حذف جميع المحادثات والبطاقات المرتبطة به من الذاكرة.`
             : `Are you sure you want to delete "${docTitle}"? All associated conversation history and flashcards will be removed.`}
@@ -73,7 +74,7 @@ export const DeleteConfirmModal: React.FC<{
         <div className="flex items-center justify-center gap-3 mt-6">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
+            className={`px-4 py-2 text-xs font-semibold rounded-xl border ${isDark ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'} transition-colors`}
           >
             {isArabic ? 'إلغاء' : 'Cancel'}
           </button>

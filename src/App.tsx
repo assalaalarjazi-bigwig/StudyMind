@@ -844,6 +844,7 @@ export default function App() {
         isOpen={Boolean(docToDelete)}
         docTitle={docToDelete?.filename || ''}
         isArabic={isAr}
+        isDark={isDark}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDocToDelete(null)}
       />
