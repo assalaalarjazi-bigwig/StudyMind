@@ -49,3 +49,17 @@ export interface ChatMessage {
   content: string;
   citations?: { page: number; snippet: string }[];
 }
+
+export interface WeakConceptItem {
+  id: string;
+  title: string;
+  questionText: string;
+  userMistake?: string;
+  correctAnswer: string;
+  explanation: string;
+  sourceType: 'quiz' | 'flashcard' | 'manual';
+  docFilename: string;
+  page?: number;
+  recordedAt: number;
+}
+

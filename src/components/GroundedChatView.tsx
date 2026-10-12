@@ -8,6 +8,7 @@ interface GroundedChatViewProps {
   isArabic: boolean;
   isDark?: boolean;
   isTyping: boolean;
+  isOnline?: boolean;
   onSendMessage: (query: string) => void;
 }
 
@@ -17,6 +18,7 @@ export const GroundedChatView: React.FC<GroundedChatViewProps> = ({
   isArabic,
   isDark = false,
   isTyping,
+  isOnline = true,
   onSendMessage,
 }) => {
   const [inputQuery, setInputQuery] = useState('');
@@ -144,26 +146,45 @@ export const GroundedChatView: React.FC<GroundedChatViewProps> = ({
         ))}
       </div>
 
+      {/* Offline Mode Banner for Chat */}
+      {!isOnline && (
+        <div className={`px-4 py-2 text-xs border-t flex items-center justify-between gap-2 ${
+          isDark ? 'bg-amber-950/40 border-amber-900/60 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <p>
+              {isArabic
+                ? 'وضع عدم الاتصال: يمكنك تصفح كافة إجابات ومحادثات الذكاء الاصطناعي السابقة. لبدء محادثة جديدة وتوليد إجابات حية، يرجى الاتصال بالإنترنت.'
+                : 'Offline Mode: You can browse all previous conversation history. To ask new questions and generate live AI responses, please reconnect to the internet.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Input Bar */}
       <form onSubmit={handleSubmit} className={`p-3 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} border-t flex gap-2`}>
         <input
           type="text"
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
+          disabled={!isOnline}
           placeholder={
-            isArabic
+            !isOnline
+              ? (isArabic ? 'وضع عدم الاتصال — استعراض المحادثات السابقة متاح، اتصل بالإنترنت للسؤال...' : 'Offline — browse previous answers, connect to ask...')
+              : isArabic
               ? `اسأل عن موضوع "${document.filename}" أو اطلب شرح وتوضيح أي مصطلح...`
               : `Ask about "${document.filename}" or request explanations...`
           }
           className={`flex-1 ${
             isDark
-              ? 'bg-slate-800/80 border-slate-700 text-slate-100 placeholder-slate-500 focus:bg-slate-800'
-              : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white'
+              ? 'bg-slate-800/80 border-slate-700 text-slate-100 placeholder-slate-500 focus:bg-slate-800 disabled:opacity-60'
+              : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white disabled:opacity-60'
           } border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
         />
         <button
           type="submit"
-          disabled={!inputQuery.trim() || isTyping}
+          disabled={!inputQuery.trim() || isTyping || !isOnline}
           className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-1.5 shadow-xs"
         >
           <span>{isArabic ? 'إرسال' : 'Ask'}</span>

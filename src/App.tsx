@@ -16,9 +16,10 @@ import {
   CheckCircle2,
   ChevronDown,
   Moon,
-  Sun
+  Sun,
+  Sparkles
 } from 'lucide-react';
-import { DocumentItem, Flashcard, QuizQuestion, DiagramItem, ChatMessage } from './types';
+import { DocumentItem, Flashcard, QuizQuestion, DiagramItem, ChatMessage, WeakConceptItem } from './types';
 import { Toast, ToastMessage, DeleteConfirmModal } from './components/Toast';
 import { SourcesPanel } from './components/SourcesPanel';
 import { FlashcardsView } from './components/FlashcardsView';
@@ -28,6 +29,47 @@ import { GroundedChatView } from './components/GroundedChatView';
 import { SummaryView } from './components/SummaryView';
 import { BrandLogo } from './components/BrandLogo';
 import { WeakConceptsModal } from './components/WeakConceptsModal';
+import { SplashScreen } from './components/SplashScreen';
+
+// Seed Initial Weak Concepts to guide the learner immediately with crystal-clear context
+const INITIAL_WEAK_CONCEPTS: WeakConceptItem[] = [
+  {
+    id: 'wc-seed-1',
+    title: 'خوارزمية التحكم في الازدحام (AIMD Multiplicative Decrease)',
+    questionText: 'ما هي القيمة التي تنخفض إليها نافذة الازدحام (cwnd) عند اكتشاف فقد الحزم عبر 3 إشعارات مكررة (3 Duplicate ACKs) في بروتوكول TCP Reno؟',
+    userMistake: 'تنخفض نافذة الازدحام فوراً إلى 1 MSS لتبدأ من جديد.',
+    correctAnswer: 'تنخفض نافذة الازدحام إلى النصف (cwnd / 2) مع الدخول في وضع التعافي السريع (Fast Recovery).',
+    explanation: 'وفقاً لمبدأ AIMD في TCP Reno، فإن 3 إشعارات مكررة تدل على وصول الحزم التالية وتفادي الازدحام الخانق، لذا لا يتم التصفير بل التنصيف فقط.',
+    sourceType: 'quiz',
+    docFilename: 'Computer_Networks_Protocols_Handbook.pdf',
+    page: 18,
+    recordedAt: Date.now() - 3600000,
+  },
+  {
+    id: 'wc-seed-2',
+    title: 'المصافحة الثلاثية (TCP 3-Way Handshake SYN/ACK)',
+    questionText: 'ما هو رقم التأكيد (Acknowledgement Number) الذي يرسله الخادم للعميل رداً على حزمة SYN تحمل الرقم التسلسلي Seq=1000؟',
+    userMistake: 'Ack=1000 (تأكيد نفس الرقم المستلم دون زيادة)',
+    correctAnswer: 'Ack=1001 (تأكيد استلام بايت الـ SYN واستهلاك رقم تسلسلي واحد)',
+    explanation: 'تستهلك راية SYN في TCP رقماً تسلسلياً واحداً (Phantom Byte)، لذلك يجب أن يكون رقم التأكيد Ack هو x + 1، أي 1001.',
+    sourceType: 'quiz',
+    docFilename: 'Computer_Networks_Protocols_Handbook.pdf',
+    page: 7,
+    recordedAt: Date.now() - 7200000,
+  },
+  {
+    id: 'wc-seed-3',
+    title: 'التحكم في التدفق مقابل التحكم في الازدحام (rwnd vs cwnd)',
+    questionText: 'ما هو الفرق الجوهري بين نافذة الاستقبال (rwnd) ونافذة الازدحام (cwnd) في حساب النافذة الفعالة المسموح بإرسالها؟',
+    userMistake: 'كلا النافذتين تقاسان وتفرضان من قِبل شبكة الراوترات الوسيطة.',
+    correctAnswer: 'نافذة rwnd يحددها المستقبل لحماية مخزنه المؤقت، بينما cwnd يحسبها المرسل لتقدير سعة الشبكة. الإرسال الفعلي يلتزم بـ min(rwnd, cwnd).',
+    explanation: 'التحكم بالتدفق هو علاقة نهاية بنهاية (End-to-End) لمنع إغراق المستقبل، بينما التحكم بالازدحام يقيس ازدحام مسار الشبكة الوسيطة.',
+    sourceType: 'flashcard',
+    docFilename: 'Computer_Networks_Protocols_Handbook.pdf',
+    page: 24,
+    recordedAt: Date.now() - 10800000,
+  },
+];
 
 // Initial Seed Documents with real technical text
 const INITIAL_DOCUMENTS: DocumentItem[] = [
@@ -238,16 +280,36 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Chat State
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: 'm-init',
-      role: 'assistant',
-      content: isAr
-        ? `مرحباً بك في StudyMind! تم فتح المستند "${activeDoc.filename}" بنجاح (${activeDoc.pageCount} صفحة). لقد قمت بفهرسة محتوى الملف بالكامل. يمكنك سؤالي عن موضوع الملف، أو طلب شرح أي مصطلح، أو الانتقال للبطاقات والاختبارات.`
-        : `Welcome to StudyMind! Loaded "${activeDoc.filename}" (${activeDoc.pageCount} pages). Ask me anything grounded in this file, or explore flashcards and quizzes.`
+  // Persistent Chat History per Document
+  const [chatHistoryByDoc, setChatHistoryByDoc] = useState<Record<string, ChatMessage[]>>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_chats_v2');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
     }
-  ]);
+  });
+
+  // Active Document Chat State
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const docId = activeDocId || INITIAL_DOCUMENTS[0].id;
+    try {
+      const saved = localStorage.getItem('studymind_chats_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed[docId] && parsed[docId].length > 0) return parsed[docId];
+      }
+    } catch {}
+    return [
+      {
+        id: 'm-init',
+        role: 'assistant',
+        content: isAr
+          ? `مرحباً بك في StudyMind! تم فتح المستند "${activeDoc.filename}" بنجاح (${activeDoc.pageCount} صفحة). لقد قمت بفهرسة محتوى الملف بالكامل. يمكنك سؤالي عن موضوع الملف، أو طلب شرح أي مصطلح، أو الانتقال للبطاقات والاختبارات.`
+          : `Welcome to StudyMind! Loaded "${activeDoc.filename}" (${activeDoc.pageCount} pages). Ask me anything grounded in this file, or explore flashcards and quizzes.`
+      }
+    ];
+  });
   const [isTyping, setIsTyping] = useState(false);
 
   // Summaries State
@@ -255,67 +317,128 @@ export default function App() {
   const [summaryContent, setSummaryContent] = useState<string>(activeDoc.summary);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
-  // Flashcards State
+  // Persistent Flashcards per Document
+  const [flashcardsByDoc, setFlashcardsByDoc] = useState<Record<string, Flashcard[]>>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_flashcards_v2');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [cardCountChoice, setCardCountChoice] = useState<number>(8);
   const [cardCategoryChoice, setCardCategoryChoice] = useState<string>('all');
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_flashcards_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed[activeDocId] && parsed[activeDocId].length > 0) return parsed[activeDocId];
+      }
+    } catch {}
+    return [];
+  });
   const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
 
-  // Quizzes State
+  // Persistent Quizzes per Document
+  const [quizzesByDoc, setQuizzesByDoc] = useState<Record<string, QuizQuestion[]>>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_quizzes_v2');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [quizQuestionCountChoice, setQuizQuestionCountChoice] = useState<number>(5);
   const [quizDifficultyChoice, setQuizDifficultyChoice] = useState<string>('medium');
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>(() => {
+    try {
+      const saved = localStorage.getItem('studymind_quizzes_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed[activeDocId] && parsed[activeDocId].length > 0) return parsed[activeDocId];
+      }
+    } catch {}
+    return [];
+  });
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
   // Diagrams State
   const [diagrams, setDiagrams] = useState<DiagramItem[]>(INITIAL_DIAGRAMS);
   const [isGeneratingDiagrams, setIsGeneratingDiagrams] = useState(false);
 
-  // Analytics Weak Concepts
+  // Welcome Splash Screen (App Launch only, never manual button)
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Analytics Weak Concepts (Deep, pedagogically grounded knowledge gaps)
   const [isWeakConceptsModalOpen, setIsWeakConceptsModalOpen] = useState(false);
-  const [weakConcepts, setWeakConcepts] = useState<string[]>(() => {
+  const [weakConcepts, setWeakConcepts] = useState<WeakConceptItem[]>(() => {
     try {
-      const saved = localStorage.getItem('studymind_weak_concepts');
-      return saved ? JSON.parse(saved) : [
-        'Slow Start Growth (نمو البدء البطيء)',
-        'AIMD Sawtooth Dynamics (ديناميكية سن المنشار)',
-        'Packet Loss Retransmission (إعادة إرسال الحزم وتحديد الازدحام)'
-      ];
+      const saved = localStorage.getItem('studymind_weak_concepts_v3');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0].questionText) {
+          return parsed;
+        }
+      }
+      return INITIAL_WEAK_CONCEPTS;
     } catch {
-      return [
-        'Slow Start Growth (نمو البدء البطيء)',
-        'AIMD Sawtooth Dynamics (ديناميكية سن المنشار)',
-        'Packet Loss Retransmission (إعادة إرسال الحزم وتحديد الازدحام)'
-      ];
+      return INITIAL_WEAK_CONCEPTS;
     }
   });
-  const [customConceptInput, setCustomConceptInput] = useState<string>('');
 
-  // Sync to localStorage
+  // Sync core collections to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('studymind_docs', JSON.stringify(documents));
       localStorage.setItem('studymind_active_doc', activeDocId);
-      localStorage.setItem('studymind_weak_concepts', JSON.stringify(weakConcepts));
+      localStorage.setItem('studymind_weak_concepts_v3', JSON.stringify(weakConcepts));
+      localStorage.setItem('studymind_chats_v2', JSON.stringify(chatHistoryByDoc));
+      localStorage.setItem('studymind_flashcards_v2', JSON.stringify(flashcardsByDoc));
+      localStorage.setItem('studymind_quizzes_v2', JSON.stringify(quizzesByDoc));
     } catch (e) {
       console.warn('LocalStorage save failed:', e);
     }
-  }, [documents, activeDocId, weakConcepts]);
+  }, [documents, activeDocId, weakConcepts, chatHistoryByDoc, flashcardsByDoc, quizzesByDoc]);
 
-  // When activeDocId changes, load initial materials for that document
+  // When activeDocId changes, load offline-first cached materials for that document
   useEffect(() => {
     setSummaryContent(activeDoc.summary);
-    setMessages([
-      {
-        id: `m-doc-${Date.now()}`,
-        role: 'assistant',
-        content: isAr
-          ? `تم تفعيل المستند "${activeDoc.filename}" (${activeDoc.pageCount} صفحة). اسألني عن موضوع الملف أو أي مصطلح ترغب بفهمه مباشرة من نصوص المستند.`
-          : `Activated "${activeDoc.filename}" (${activeDoc.pageCount} pages). Ask anything grounded in this file.`
-      }
-    ]);
-    generateFlashcardsForDoc(activeDoc, cardCountChoice, cardCategoryChoice);
-    generateQuizForDoc(activeDoc, quizQuestionCountChoice, quizDifficultyChoice);
+
+    // 1. Load or initialize chat for active document
+    const savedChat = chatHistoryByDoc[activeDoc.id];
+    if (savedChat && savedChat.length > 0) {
+      setMessages(savedChat);
+    } else {
+      const initialChatMsg: ChatMessage[] = [
+        {
+          id: `m-doc-${Date.now()}`,
+          role: 'assistant',
+          content: isAr
+            ? `تم تفعيل المستند "${activeDoc.filename}" (${activeDoc.pageCount} صفحة). اسألني عن موضوع الملف أو أي مصطلح ترغب بفهمه مباشرة من نصوص المستند.`
+            : `Activated "${activeDoc.filename}" (${activeDoc.pageCount} pages). Ask anything grounded in this file.`
+        }
+      ];
+      setMessages(initialChatMsg);
+      setChatHistoryByDoc((prev) => ({ ...prev, [activeDoc.id]: initialChatMsg }));
+    }
+
+    // 2. Load cached flashcards or generate if not present
+    const savedCards = flashcardsByDoc[activeDoc.id];
+    if (savedCards && savedCards.length > 0) {
+      setFlashcards(savedCards);
+    } else {
+      generateFlashcardsForDoc(activeDoc, cardCountChoice, cardCategoryChoice);
+    }
+
+    // 3. Load cached quizzes or generate if not present
+    const savedQuiz = quizzesByDoc[activeDoc.id];
+    if (savedQuiz && savedQuiz.length > 0) {
+      setQuizQuestions(savedQuiz);
+    } else {
+      generateQuizForDoc(activeDoc, quizQuestionCountChoice, quizDifficultyChoice);
+    }
+
     generateDiagramsForDoc(activeDoc);
   }, [activeDocId]);
 
@@ -323,6 +446,16 @@ export default function App() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!isOnline) {
+      addToast(
+        'info',
+        isAr
+          ? 'أنت في وضع عدم الاتصال: المستندات المحفوظة متاحة محلياً، ويلزم الاتصال بالإنترنت لمعالجة مستندات جديدة بالذكاء الاصطناعي.'
+          : 'You are offline: Saved materials are available locally; network is required to analyze new documents with AI.'
+      );
+      return;
+    }
 
     setIsUploading(true);
     setUploadStatus(isAr ? 'جارٍ قراءة الملف وتحليل الصفحات الفعلية...' : 'Parsing document pages and text...');
@@ -424,8 +557,20 @@ export default function App() {
 
   // --- Real Grounded Chat Handler ---
   const handleSendMessage = async (query: string) => {
+    if (!isOnline) {
+      addToast(
+        'info',
+        isAr
+          ? 'أنت في وضع عدم الاتصال: يمكنك استعراض كافة المحادثات السابقة بالكامل، ويلزم الاتصال بالإنترنت لإرسال استفسار جديد للذكاء الاصطناعي.'
+          : 'Offline Mode: You can browse all previous conversation history. Reconnect to ask new questions.'
+      );
+      return;
+    }
+
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: query };
-    setMessages((prev) => [...prev, userMsg]);
+    const currentList = [...messages, userMsg];
+    setMessages(currentList);
+    setChatHistoryByDoc((prev) => ({ ...prev, [activeDoc.id]: currentList }));
     setIsTyping(true);
 
     try {
@@ -444,15 +589,15 @@ export default function App() {
       if (!resp.ok) throw new Error('Chat API failed');
       const data = await resp.json();
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: 'assistant',
-          content: data.reply,
-          citations: data.citations
-        }
-      ]);
+      const assistantMsg: ChatMessage = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        content: data.reply,
+        citations: data.citations
+      };
+      const finalList = [...currentList, assistantMsg];
+      setMessages(finalList);
+      setChatHistoryByDoc((prev) => ({ ...prev, [activeDoc.id]: finalList }));
     } catch (err: any) {
       console.error('Chat error:', err);
       // Grounded fallback
@@ -460,15 +605,15 @@ export default function App() {
         ? `بناءً على نصوص المستند "${activeDoc.filename}" [صفحة 1]:\nيدور محتوى هذا الملف حول الموضوعات العلمية الموثقة في صفحاته البالغة ${activeDoc.pageCount} صفحة.\n\n💡 توضيح تكميلي وشرح مفاهيمي: يمكنك الاستفسار عن تفاصيل أي قسم، أو طلب تلخيص شامل، أو توليد بطاقات استذكار مخصصة للتحضير للاختبار.`
         : `Grounded in "${activeDoc.filename}" [Page 1]: This study material covers curriculum concepts structured across ${activeDoc.pageCount} pages. Feel free to ask for specific derivations or summaries.`;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: 'assistant',
-          content: reply,
-          citations: [{ page: 1, snippet: activeDoc.filename }]
-        }
-      ]);
+      const assistantMsg: ChatMessage = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+        citations: [{ page: 1, snippet: activeDoc.filename }]
+      };
+      const finalList = [...currentList, assistantMsg];
+      setMessages(finalList);
+      setChatHistoryByDoc((prev) => ({ ...prev, [activeDoc.id]: finalList }));
     } finally {
       setIsTyping(false);
     }
@@ -493,6 +638,7 @@ export default function App() {
       const data = await resp.json();
       if (data.flashcards && data.flashcards.length > 0) {
         setFlashcards(data.flashcards);
+        setFlashcardsByDoc((prev) => ({ ...prev, [doc.id]: data.flashcards }));
         return;
       }
     } catch (e) {
@@ -514,6 +660,7 @@ export default function App() {
         });
       }
       setFlashcards(generated);
+      setFlashcardsByDoc((prev) => ({ ...prev, [doc.id]: generated }));
     } finally {
       setIsGeneratingFlashcards(false);
     }
@@ -538,6 +685,7 @@ export default function App() {
       const data = await resp.json();
       if (data.questions && data.questions.length > 0) {
         setQuizQuestions(data.questions);
+        setQuizzesByDoc((prev) => ({ ...prev, [doc.id]: data.questions }));
         return;
       }
     } catch (e) {
@@ -562,6 +710,7 @@ export default function App() {
         });
       }
       setQuizQuestions(generated);
+      setQuizzesByDoc((prev) => ({ ...prev, [doc.id]: generated }));
     } finally {
       setIsGeneratingQuiz(false);
     }
@@ -597,6 +746,16 @@ export default function App() {
 
   // --- In-Depth Summary Generator ---
   const handleGenerateSummary = async () => {
+    if (!isOnline) {
+      addToast(
+        'info',
+        isAr
+          ? 'أنت في وضع عدم الاتصال: الملخص الحالي متاح بالكامل للقراءة، ويلزم الاتصال بالإنترنت لتوليد نمط ملخص جديد بالذكاء الاصطناعي.'
+          : 'Offline Mode: The current summary is stored and fully accessible. Reconnect to regenerate with AI.'
+      );
+      return;
+    }
+
     setIsGeneratingSummary(true);
     try {
       const resp = await fetch('/api/generate-summary', {
@@ -624,20 +783,41 @@ export default function App() {
     }
   };
 
-  const handleUpdateMastery = (cardIndex: number, level: 0 | 1 | 2 | 3) => {
-    const updated = [...flashcards];
-    if (updated[cardIndex]) {
-      updated[cardIndex].mastery = level;
-      setFlashcards(updated);
-      if (level === 1 && !weakConcepts.includes(updated[cardIndex].front.slice(0, 25))) {
-        setWeakConcepts((prev) => [...prev, updated[cardIndex].front.slice(0, 25)]);
-      }
-    }
+  const handleRecordWeakConcept = (item: Omit<WeakConceptItem, 'id' | 'recordedAt'>) => {
+    const newItem: WeakConceptItem = {
+      ...item,
+      id: `wc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      recordedAt: Date.now(),
+    };
+    setWeakConcepts((prev) => {
+      const exists = prev.some((p) => p.questionText === newItem.questionText);
+      if (exists) return prev;
+      return [newItem, ...prev];
+    });
+    addToast('info', isAr ? `تم رصد نقطة تحتاج لتقوية: ${item.title}` : `Logged weak concept: ${item.title}`);
   };
 
-  const handleRecordWeakConcept = (concept: string) => {
-    if (!weakConcepts.includes(concept)) {
-      setWeakConcepts((prev) => [...prev, concept]);
+  const handleUpdateMastery = (cardIndex: number, level: 0 | 1 | 2 | 3) => {
+    const updated = [...flashcards];
+    const card = updated[cardIndex];
+    if (card) {
+      card.mastery = level;
+      setFlashcards(updated);
+      setFlashcardsByDoc((prev) => ({ ...prev, [activeDoc.id]: updated }));
+      if (level === 1) {
+        handleRecordWeakConcept({
+          title: card.category ? (isAr ? `بطاقة استذكار: ${card.category}` : `Flashcard: ${card.category}`) : (isAr ? 'بطاقة استذكار' : 'Flashcard'),
+          questionText: card.front,
+          correctAnswer: card.back,
+          explanation: card.back,
+          sourceType: 'flashcard',
+          docFilename: activeDoc.filename,
+          page: card.page,
+        });
+      } else if (level === 3) {
+        // Mastered card - remove from weak concepts if present
+        setWeakConcepts((prev) => prev.filter((wc) => wc.questionText !== card.front));
+      }
     }
   };
 
@@ -647,6 +827,15 @@ export default function App() {
       className={`min-h-screen ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} flex flex-col font-sans transition-colors`}
       style={{ fontFamily: isAr ? "'Cairo', system-ui, sans-serif" : "'Inter', system-ui, sans-serif" }}
     >
+      {/* Welcome Splash Screen on Initial Startup */}
+      {showSplash && (
+        <SplashScreen
+          isArabic={isAr}
+          isDark={isDark}
+          onFinish={() => setShowSplash(false)}
+        />
+      )}
+
       {/* Toast Notifications */}
       <Toast toasts={toasts} onDismiss={removeToast} />
 
@@ -667,28 +856,28 @@ export default function App() {
         weakConcepts={weakConcepts}
         activeDocFilename={activeDoc.filename}
         onClose={() => setIsWeakConceptsModalOpen(false)}
-        onTestConcept={(concept) => {
+        onTestConcept={(item) => {
           setActiveNav('workspace');
           setActiveTab('quiz');
           setQuizDifficultyChoice('adaptive');
           generateQuizForDoc(activeDoc, 5, 'adaptive');
-          addToast('success', isAr ? `تم إعداد اختبار تكيفي مركز لتقوية: ${concept}` : `Prepared quiz for: ${concept}`);
+          addToast('success', isAr ? `تم إعداد اختبار تكيفي مركز لتقوية: ${item.title}` : `Prepared quiz for: ${item.title}`);
         }}
-        onChatExplain={(concept) => {
+        onChatExplain={(item) => {
           setActiveNav('workspace');
           setActiveTab('chat');
           const query = isAr
-            ? `اشرح لي بالتفصيل مفهوم "${concept}" من واقع المستند الحالي، وما هي أهم النقاط التي يجب أن أركز عليها لتجنب الخطأ فيه في الاختبارات؟`
-            : `Explain the concept "${concept}" in detail based on this document and key points for exams.`;
+            ? `اشرح لي بالتفصيل مفهوم "${item.title}"، ولماذا الإجابة "${item.correctAnswer}" صحيحة بينما "${item.userMistake || ''}" غير صحيحة، وكيف أتفادى هذا الخطأ في الاختبارات؟`
+            : `Explain the concept "${item.title}" in detail, why "${item.correctAnswer}" is correct vs "${item.userMistake || ''}", and how to avoid this error on exams.`;
           handleSendMessage(query);
         }}
         onViewDiagrams={() => {
           setActiveNav('workspace');
           setActiveTab('figures');
         }}
-        onMarkMastered={(concept) => {
-          setWeakConcepts((prev) => prev.filter((c) => c !== concept));
-          addToast('success', isAr ? `أحسنت! تم إتقان مفهوم: ${concept}` : `Mastered: ${concept}`);
+        onMarkMastered={(id, title) => {
+          setWeakConcepts((prev) => prev.filter((c) => c.id !== id));
+          addToast('success', isAr ? `أحسنت! تم إتقان مفهوم: ${title} وإزالته من الفجوات` : `Mastered: ${title}`);
         }}
         onRetestAll={() => {
           setActiveNav('workspace');
@@ -697,11 +886,8 @@ export default function App() {
           generateQuizForDoc(activeDoc, Math.max(3, weakConcepts.length * 2), 'adaptive');
           addToast('success', isAr ? 'تم بدء اختبار تكيفي يركز على مفاهيمك الضعيفة' : 'Starting adaptive quiz for weak concepts');
         }}
-        onAddConcept={(concept) => {
-          if (!weakConcepts.includes(concept)) {
-            setWeakConcepts((prev) => [...prev, concept]);
-            addToast('info', isAr ? `تمت إضافة المفهوم: ${concept}` : `Added concept: ${concept}`);
-          }
+        onAddConcept={(item) => {
+          handleRecordWeakConcept(item);
         }}
       />
 
@@ -785,6 +971,27 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Offline Mode Prominent Status Bar (Like ChatGPT & Google Workspace) */}
+      {!isOnline && (
+        <div className={`border-b px-4 py-2.5 text-xs transition-colors ${
+          isDark ? 'bg-amber-950/40 border-amber-900/60 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <p className="font-semibold leading-relaxed">
+                {isAr
+                  ? '📶 أنت في وضع عدم الاتصال: التطبيق وجميع المستندات والمحادثات والبطاقات المحفوظة متاحة محلياً بالكامل. يمكنك مراجعة ودراسة محتواك بدون إنترنت.'
+                  : '📶 Offline Mode: The app and all your saved study materials, flashcards, and chat history are available locally.'}
+              </p>
+            </div>
+            <span className="text-[11px] font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-full shrink-0">
+              {isAr ? 'محفوظ محلياً' : 'Stored Locally'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Container Layout */}
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col md:flex-row p-3 md:p-6 gap-4 sm:gap-6">
@@ -950,6 +1157,7 @@ export default function App() {
                   isArabic={isAr}
                   isDark={isDark}
                   isTyping={isTyping}
+                  isOnline={isOnline}
                   onSendMessage={handleSendMessage}
                 />
               )}
@@ -1121,8 +1329,8 @@ export default function App() {
                 </h3>
                 <p className="text-sm text-blue-100 mt-2 leading-relaxed">
                   {isAr
-                    ? `أظهرت تحليلات الاختبارات والمراجعات فجوات معرفية في: ${weakConcepts.join(', ')}.`
-                    : `Your assessment analytics have mapped knowledge gaps in: ${weakConcepts.join(', ')}.`}
+                    ? `أظهرت تحليلات الاختبارات والمراجعات فجوات معرفية في: ${weakConcepts.map((w) => w.title).join('، ')}.`
+                    : `Your assessment analytics have mapped knowledge gaps in: ${weakConcepts.map((w) => w.title).join(', ')}.`}
                 </p>
               </div>
 
@@ -1181,7 +1389,7 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-amber-500 mt-1">
-                    {weakConcepts.length} {isAr ? 'مفاهيم' : 'concepts'}
+                    {weakConcepts.length} {isAr ? 'مفاهيم مرصودة' : 'concepts'}
                   </p>
                   <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
                     {isAr ? 'انقر لفتح واستعراض النقاط الضعيفة واختبارها فورياً' : 'Click to view weak points and test directly'}
@@ -1206,8 +1414,8 @@ export default function App() {
                     </div>
                     <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>
                       {isAr
-                        ? 'انقر على أي خيار للانتقال الفوري إلى اختباره، أو لشرحه في المحادثة، أو لفتح المخطط المرتبط به.'
-                        : 'Click any option to jump directly into testing it, generating an instant AI explanation, or opening related diagrams.'}
+                        ? 'تُسجل هذه النقاط تلقائياً عند الخطأ في الاختبار أو بطاقات الاستذكار. اختر أي مفهوم لاختباره، أو لشرحه في المحادثة، أو لفتح المخطط.'
+                        : 'Automatically logged from quizzes & flashcards. Choose any topic to test, explain in chat, or view diagrams.'}
                     </p>
                   </div>
 
@@ -1240,40 +1448,83 @@ export default function App() {
                     </p>
                     <p className="text-xs mt-1">
                       {isAr
-                        ? 'أحسنت! جميع مفاهيمك مؤكدة. يمكنك إجراء اختبار جديد لقياس تمكنك من المستند.'
-                        : 'Great job! Take another quiz to challenge yourself further.'}
+                        ? 'أحسنت! جميع مفاهيمك مؤكدة. عند إجراء اختبار والخطأ في أي سؤال، سيظهر السؤال وإجابته الصحيحة هنا تلقائياً لتقويتها.'
+                        : 'Great job! As you take quizzes and study flashcards, any question you miss will appear here automatically.'}
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {weakConcepts.map((concept, idx) => (
+                  <div className="space-y-3.5">
+                    {weakConcepts.map((item, idx) => (
                       <div
-                        key={idx}
-                        className={`p-4 rounded-xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-3 transition-all ${
+                        key={item.id || idx}
+                        className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3 ${
                           isDark
                             ? 'bg-slate-800/60 border-slate-700/80 hover:border-amber-500/50'
                             : 'bg-amber-50/30 border-amber-200/80 hover:border-amber-400'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                            <h4 className="font-bold text-sm truncate">
-                              {concept}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 h-5 rounded-md bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <h4 className="font-bold text-sm sm:text-base truncate">
+                              {item.title}
                             </h4>
-                            <span className="text-[10px] bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded border border-amber-500/20 shrink-0">
-                              {isAr ? 'يحتاج مراجعة' : 'Needs Review'}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {item.sourceType === 'quiz' ? (
+                              <span className="text-[10px] bg-red-500/15 text-red-500 font-bold px-2 py-0.5 rounded border border-red-500/25">
+                                {isAr ? 'خطأ باختبار' : 'Quiz Mistake'}
+                              </span>
+                            ) : item.sourceType === 'flashcard' ? (
+                              <span className="text-[10px] bg-blue-500/15 text-blue-500 font-bold px-2 py-0.5 rounded border border-blue-500/25">
+                                {isAr ? 'بطاقة استذكار' : 'Flashcard'}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-amber-500/15 text-amber-500 font-bold px-2 py-0.5 rounded border border-amber-500/25">
+                                {isAr ? 'مضاف يدوياً' : 'Manual'}
+                              </span>
+                            )}
+                            <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {item.docFilename} (ص {item.page || 1})
                             </span>
                           </div>
-                          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
-                            {isAr
-                              ? `مرصود في محتوى: ${activeDoc.filename} — اختر أدناه للانتقال الفوري لدراسته أو اختباره`
-                              : `Identified in: ${activeDoc.filename} — select below to study or test this topic`}
-                          </p>
                         </div>
 
+                        {/* Question Text */}
+                        <div className={`p-2.5 rounded-xl border text-xs font-medium ${
+                          isDark ? 'bg-slate-900/60 border-slate-700 text-slate-200' : 'bg-white border-amber-200/60 text-slate-800'
+                        }`}>
+                          <span className="text-amber-500 font-bold ml-1">📌 {isAr ? 'السؤال / النقطة المطلوبة:' : 'Question / Point:'}</span>
+                          <span>{item.questionText}</span>
+                        </div>
+
+                        {/* Mistakes and Correct Answer */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {item.userMistake && (
+                            <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300">
+                              <span className="font-bold block text-red-600 dark:text-red-400">❌ {isAr ? 'إجابتك السابقة:' : 'Your Answer:'}</span>
+                              <p className="mt-0.5 font-medium">{item.userMistake}</p>
+                            </div>
+                          )}
+                          <div className={`p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 ${!item.userMistake ? 'sm:col-span-2' : ''}`}>
+                            <span className="font-bold block text-emerald-600 dark:text-emerald-400">✅ {isAr ? 'الإجابة الصحيحة:' : 'Correct Answer:'}</span>
+                            <p className="mt-0.5 font-medium">{item.correctAnswer}</p>
+                          </div>
+                        </div>
+
+                        {/* Explanation */}
+                        {item.explanation && (
+                          <p className={`text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'} leading-relaxed`}>
+                            <span className="font-bold text-blue-500">💡 {isAr ? 'الشرح من المستند: ' : 'Explanation: '}</span>
+                            {item.explanation}
+                          </p>
+                        )}
+
                         {/* Direct Navigation Buttons to this concept */}
-                        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
+                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                           {/* 1. Navigate to Quiz focused on this concept */}
                           <button
                             onClick={() => {
@@ -1281,9 +1532,9 @@ export default function App() {
                               setActiveTab('quiz');
                               setQuizDifficultyChoice('adaptive');
                               generateQuizForDoc(activeDoc, 5, 'adaptive');
-                              addToast('success', isAr ? `تم إعداد اختبار مركز لتقوية: ${concept}` : `Prepared quiz for: ${concept}`);
+                              addToast('success', isAr ? `تم إعداد اختبار مركز لتقوية: ${item.title}` : `Prepared quiz for: ${item.title}`);
                             }}
-                            className="flex-1 md:flex-initial flex items-center justify-center gap-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors"
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors shadow-2xs"
                             title={isAr ? 'انتقال للاختبار حول هذا المفهوم' : 'Test this concept'}
                           >
                             <HelpCircle className="w-3.5 h-3.5" />
@@ -1296,11 +1547,11 @@ export default function App() {
                               setActiveNav('workspace');
                               setActiveTab('chat');
                               const query = isAr
-                                ? `اشرح لي بالتفصيل مفهوم "${concept}" من واقع المستند الحالي، وما هي أهم النقاط التي يجب أن أركز عليها لتجنب الخطأ فيه في الاختبارات؟`
-                                : `Explain the concept "${concept}" in detail based on this document and key points for exams.`;
+                                ? `اشرح لي بالتفصيل مفهوم "${item.title}"، ولماذا الإجابة "${item.correctAnswer}" صحيحة بينما "${item.userMistake || ''}" غير صحيحة، وكيف أتفادى هذا الخطأ في الاختبارات؟`
+                                : `Explain "${item.title}" in detail, why "${item.correctAnswer}" is correct vs "${item.userMistake || ''}", and exam tips.`;
                               handleSendMessage(query);
                             }}
-                            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 border ${
+                            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 border ${
                               isDark ? 'border-slate-700 hover:bg-slate-700 text-slate-200' : 'border-slate-300 hover:bg-slate-100 text-slate-800'
                             } font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors`}
                             title={isAr ? 'اسأل الذكاء الاصطناعي في المحادثة' : 'Ask AI in Chat'}
@@ -1315,7 +1566,7 @@ export default function App() {
                               setActiveNav('workspace');
                               setActiveTab('figures');
                             }}
-                            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 border ${
+                            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 border ${
                               isDark ? 'border-slate-700 hover:bg-slate-700 text-slate-200' : 'border-slate-300 hover:bg-slate-100 text-slate-800'
                             } font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors`}
                             title={isAr ? 'استعراض المخططات التوضيحية' : 'View Diagrams'}
@@ -1327,8 +1578,8 @@ export default function App() {
                           {/* 4. Mark as Mastered */}
                           <button
                             onClick={() => {
-                              setWeakConcepts((prev) => prev.filter((c) => c !== concept));
-                              addToast('success', isAr ? `أحسنت! تم إتقان مفهوم: ${concept}` : `Mastered: ${concept}`);
+                              setWeakConcepts((prev) => prev.filter((c) => c.id !== item.id));
+                              addToast('success', isAr ? `أحسنت! تم إتقان مفهوم: ${item.title}` : `Mastered: ${item.title}`);
                             }}
                             className="p-1.5 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
                             title={isAr ? 'تحديد كـ "تم إتقانه"' : 'Mark as Mastered'}
@@ -1345,20 +1596,27 @@ export default function App() {
                 <div className="pt-2 flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
-                    value={customConceptInput}
-                    onChange={(e) => setCustomConceptInput(e.target.value)}
+                    id="manual-concept-input"
+                    placeholder={isAr ? 'أضف أي مصطلح أو مفهوم ترغب بتحديده للتقوية...' : 'Add a concept you want to reinforce...'}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const val = customConceptInput.trim();
-                        if (val && !weakConcepts.includes(val)) {
-                          setWeakConcepts((prev) => [...prev, val]);
-                          setCustomConceptInput('');
-                          addToast('info', isAr ? `تمت إضافة المفهوم: ${val}` : `Added concept: ${val}`);
+                        const target = e.currentTarget;
+                        const val = target.value.trim();
+                        if (val) {
+                          handleRecordWeakConcept({
+                            title: val,
+                            questionText: val,
+                            correctAnswer: isAr ? 'مفهوم قيد المراجعة والتقوية' : 'Concept under active reinforcement',
+                            explanation: isAr ? 'تمت إضافة هذا المفهوم يدوياً للتقوية والمراجعة.' : 'Manually registered for review.',
+                            sourceType: 'manual',
+                            docFilename: activeDoc.filename,
+                            page: 1,
+                          });
+                          target.value = '';
                         }
                       }
                     }}
-                    placeholder={isAr ? 'أضف أي مصطلح أو مفهوم ترغب بتحديده للتقوية...' : 'Add a concept you want to reinforce...'}
                     className={`flex-1 text-xs rounded-xl px-3.5 py-2 border transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
                       isDark ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
@@ -1366,15 +1624,22 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      const val = customConceptInput.trim();
-                      if (val && !weakConcepts.includes(val)) {
-                        setWeakConcepts((prev) => [...prev, val]);
-                        setCustomConceptInput('');
-                        addToast('info', isAr ? `تمت إضافة المفهوم: ${val}` : `Added concept: ${val}`);
+                      const input = document.getElementById('manual-concept-input') as HTMLInputElement | null;
+                      const val = input?.value.trim();
+                      if (val) {
+                        handleRecordWeakConcept({
+                          title: val,
+                          questionText: val,
+                          correctAnswer: isAr ? 'مفهوم قيد المراجعة والتقوية' : 'Concept under active reinforcement',
+                          explanation: isAr ? 'تمت إضافة هذا المفهوم يدوياً للتقوية والمراجعة.' : 'Manually registered for review.',
+                          sourceType: 'manual',
+                          docFilename: activeDoc.filename,
+                          page: 1,
+                        });
+                        if (input) input.value = '';
                       }
                     }}
-                    disabled={!customConceptInput.trim()}
-                    className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors shrink-0"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors shrink-0"
                   >
                     {isAr ? 'إضافة للتقوية' : 'Add Concept'}
                   </button>

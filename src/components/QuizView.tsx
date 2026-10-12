@@ -13,7 +13,7 @@ import {
   Award,
   RefreshCw
 } from 'lucide-react';
-import { QuizQuestion, DocumentItem } from '../types';
+import { QuizQuestion, DocumentItem, WeakConceptItem } from '../types';
 
 interface QuizViewProps {
   document: DocumentItem;
@@ -26,7 +26,7 @@ interface QuizViewProps {
   onCountChange: (count: number) => void;
   onDifficultyChange: (diff: string) => void;
   onRegenerate: () => void;
-  onRecordWeakConcept: (concept: string) => void;
+  onRecordWeakConcept: (item: Omit<WeakConceptItem, 'id' | 'recordedAt'>) => void;
 }
 
 export const QuizView: React.FC<QuizViewProps> = ({
@@ -69,7 +69,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }));
 
     if (!isCorrect) {
-      onRecordWeakConcept(question.conceptTag || (isArabic ? 'مفهوم دراسي غير محدد' : 'Key Study Concept'));
+      onRecordWeakConcept({
+        title: question.conceptTag || (isArabic ? 'سؤال اختبار تجريبي' : 'Practice Quiz Question'),
+        questionText: question.questionText,
+        userMistake: userAns,
+        correctAnswer: question.correctAnswer.join(', '),
+        explanation: question.explanation,
+        sourceType: 'quiz',
+        docFilename: document.filename,
+        page: question.page,
+      });
     }
   };
 
@@ -84,7 +93,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
         explanation: q.explanation
       };
       if (!isCorrect) {
-        onRecordWeakConcept(q.conceptTag || (isArabic ? 'مفهوم دراسي غير محدد' : 'Key Study Concept'));
+        onRecordWeakConcept({
+          title: q.conceptTag || (isArabic ? 'سؤال اختبار تجريبي' : 'Practice Quiz Question'),
+          questionText: q.questionText,
+          userMistake: userAns || (isArabic ? 'لم يتم الاختيار' : 'No option chosen'),
+          correctAnswer: q.correctAnswer.join(', '),
+          explanation: q.explanation,
+          sourceType: 'quiz',
+          docFilename: document.filename,
+          page: q.page,
+        });
       }
     });
 

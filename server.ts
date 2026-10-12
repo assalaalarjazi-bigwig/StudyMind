@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { createRequire } from 'module';
 import dotenv from 'dotenv';
+import path from 'path';
 
 const require = createRequire(import.meta.url);
 const pdfParsePkg = require('pdf-parse');
@@ -620,12 +621,18 @@ async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
   if (!isProd) {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
     app.use(express.static('dist'));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.resolve('dist', 'index.html'));
+    });
   }
 
   app.listen(port, '0.0.0.0', () => {
