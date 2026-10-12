@@ -212,6 +212,22 @@ export default function App() {
     }
   }, [isDark]);
 
+  // Modals & Toasts
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [docToDelete, setDocToDelete] = useState<DocumentItem | null>(null);
+
+  const addToast = (type: 'success' | 'error' | 'info', message: string) => {
+    const id = `t-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3800);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   // Online / Offline Connectivity State
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
 
@@ -263,22 +279,6 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Modals & Toasts
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [docToDelete, setDocToDelete] = useState<DocumentItem | null>(null);
-
-  const addToast = (type: 'success' | 'error' | 'info', message: string) => {
-    const id = `t-${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3800);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
 
   // Persistent Chat History per Document
   const [chatHistoryByDoc, setChatHistoryByDoc] = useState<Record<string, ChatMessage[]>>(() => {

@@ -1,5 +1,5 @@
 import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
 
 // Suppress Vite HMR WebSocket connection errors in sandbox/proxy environments
