@@ -13,8 +13,9 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled to eliminate WebSocket connection errors in preview/iframe environment
-      hmr: false,
+      // HMR and WebSocket are completely disabled in preview/cloud sandbox
+      hmr: false as const,
+      ws: false as const,
       watch: null,
     },
   };

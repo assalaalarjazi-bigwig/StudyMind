@@ -4,13 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Gracefully handle dev environment WebSocket close events (HMR disabled in cloud/iframe sandbox)
-      window.addEventListener('unhandledrejection', function(event) {
-        var msg = (event && event.reason && (event.reason.message || event.reason.toString())) || '';
-        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1) {
-          event.preventDefault();
-        }
-      });
+      (function() {
+        var origError = console.error;
+        console.error = function() {
+          var str = (arguments && arguments[0]) ? String(arguments[0]) : '';
+          if (str.indexOf('[vite] failed to connect to websocket') !== -1 || str.indexOf('WebSocket closed without opened') !== -1) {
+            return;
+          }
+          return origError.apply(console, arguments);
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+          var msg = (event && event.reason && (event.reason.message || event.reason.toString())) || '';
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
     </script>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="alternate icon" href="./favicon.png" />
@@ -26,8 +36,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="./assets/index-CHnrvxy_.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BF7UNPHw.css">
+    <script type="module" crossorigin src="./assets/index-H_3egybi.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BYek2zZx.css">
   </head>
   <body>
     <div id="root"></div>

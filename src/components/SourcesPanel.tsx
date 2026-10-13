@@ -51,14 +51,14 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
         </div>
 
         {/* Buttons to Upload and Switch Files */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap w-full sm:w-auto">
           <button
             onClick={onTriggerUpload}
             disabled={isUploading}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl text-xs transition-colors shadow-xs"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl text-xs transition-colors shadow-xs"
           >
-            <Upload className="w-3.5 h-3.5" />
-            <span>
+            <Upload className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
               {isUploading
                 ? (isArabic ? 'جارٍ قراءة الملف...' : 'Reading File...')
                 : (isArabic ? 'رفع ملف دراسي' : 'Upload File')}
@@ -67,12 +67,12 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-1.5 border ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 border ${
               isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-200' : 'border-slate-300 hover:bg-slate-50 text-slate-700'
             } font-semibold px-3 py-2 rounded-xl text-xs transition-colors`}
           >
-            <span>{isArabic ? `المستندات (${documents.length})` : `Sources (${documents.length})`}</span>
-            {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span className="truncate">{isArabic ? `المستندات (${documents.length})` : `Sources (${documents.length})`}</span>
+            {isOpen ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
           </button>
         </div>
       </div>
@@ -100,19 +100,19 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
                 <div
                   key={doc.id}
                   onClick={() => onSelectDoc(doc.id)}
-                  className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                  className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all overflow-hidden ${
                     isActive
                       ? isDark ? 'border-blue-500 bg-blue-950/40 shadow-2xs' : 'border-blue-600 bg-blue-50/50 shadow-2xs'
                       : isDark ? 'border-slate-800 hover:border-slate-700 bg-slate-800/40' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 bg-white'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <FileText className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-500' : 'text-slate-400'}`} />
-                    <div className="min-w-0">
-                      <p className={`text-xs font-bold truncate ${isActive ? 'text-blue-400' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-bold truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs ${isActive ? 'text-blue-400' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                         {doc.filename}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
                         {doc.pageCount} {isArabic ? 'صفحة' : 'pages'} · {(doc.sizeKb / 1024).toFixed(1)} MB
                       </p>
                     </div>

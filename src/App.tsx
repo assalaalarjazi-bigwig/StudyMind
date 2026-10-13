@@ -905,19 +905,11 @@ export default function App() {
       <header className={`sticky top-0 z-40 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} border-b px-4 py-3 shadow-xs transition-colors`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <BrandLogo className="w-9 h-9 sm:w-10 sm:h-10" size={40} />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`font-bold text-base sm:text-lg ${isDark ? 'text-slate-100' : 'text-slate-900'} tracking-tight`}>StudyMind</span>
-                <span className={`text-[10px] sm:text-xs ${isDark ? 'bg-blue-950/80 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'} px-2 py-0.5 rounded-full font-medium border`}>
-                  {isAr ? 'منصة الاستذكار التفاعلي' : 'Smart Interactive Study'}
-                </span>
-              </div>
-              <p className={`text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} hidden sm:block`}>
-                {isAr
-                  ? 'حوّل أي كتاب أو ملف دراسي إلى مساحة تعلم تفاعلية ذكية موثقة المصادر'
-                  : 'Turn any study document into an interactive, grounded learning space'}
-              </p>
+            <BrandLogo className="w-9 h-9 sm:w-10 sm:h-10 shrink-0" size={40} />
+            <div className="flex items-center">
+              <span className="font-extrabold text-xl sm:text-2xl tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-300 bg-clip-text text-transparent">
+                StudyMind
+              </span>
             </div>
           </div>
 
@@ -1264,51 +1256,64 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${
-                        doc.id === activeDoc.id
-                          ? isDark ? 'border-blue-500 bg-blue-950/30' : 'border-blue-600 bg-blue-50/30'
-                          : isDark ? 'border-slate-800 hover:border-slate-700 bg-slate-900/60' : 'border-slate-200 hover:border-slate-300 bg-white'
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm truncate">{doc.filename}</span>
-                          {doc.id === activeDoc.id && (
-                            <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-bold shrink-0">
-                              {isAr ? 'المستند النشط' : 'Active'}
+                  {documents.map((doc) => {
+                    const isActive = doc.id === activeDoc.id;
+                    return (
+                      <div
+                        key={doc.id}
+                        className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 transition-all overflow-hidden ${
+                          isActive
+                            ? isDark
+                              ? 'border-blue-500 bg-blue-950/30 shadow-xs'
+                              : 'border-blue-600 bg-blue-50/40 shadow-xs'
+                            : isDark
+                              ? 'border-slate-800 hover:border-slate-700 bg-slate-900/60'
+                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 w-full">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className="font-bold text-sm truncate max-w-[200px] xs:max-w-[260px] sm:max-w-md block"
+                              title={doc.filename}
+                            >
+                              {doc.filename}
                             </span>
-                          )}
+                            {isActive && (
+                              <span className="text-[11px] bg-blue-600 text-white px-2.5 py-0.5 rounded-lg font-bold shrink-0 shadow-xs inline-flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 shrink-0" />
+                                <span>{isAr ? 'المستند النشط' : 'Active'}</span>
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-1 truncate`}>
+                            {doc.pageCount} {isAr ? 'صفحة فعلية' : 'Exact Pages'} · {(doc.sizeKb / 1024).toFixed(1)} MB
+                          </p>
                         </div>
-                        <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
-                          {doc.pageCount} {isAr ? 'صفحة فعلية' : 'Exact Pages'} · {(doc.sizeKb / 1024).toFixed(1)} MB
-                        </p>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => {
-                            setActiveDocId(doc.id);
-                            setActiveNav('workspace');
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors"
-                        >
-                          {isAr ? 'فتح للدراسة' : 'Open in Workspace'}
-                        </button>
+                        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800/60">
+                          <button
+                            onClick={() => {
+                              setActiveDocId(doc.id);
+                              setActiveNav('workspace');
+                            }}
+                            className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors text-center shadow-xs"
+                          >
+                            {isAr ? 'فتح للدراسة' : 'Open in Workspace'}
+                          </button>
 
-                        <button
-                          title={isAr ? 'حذف هذا المستند' : 'Delete document'}
-                          onClick={() => setDocToDelete(doc)}
-                          className="p-2 border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-1 text-xs font-semibold"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>{isAr ? 'حذف' : 'Delete'}</span>
-                        </button>
+                          <button
+                            title={isAr ? 'حذف هذا المستند' : 'Delete document'}
+                            onClick={() => setDocToDelete(doc)}
+                            className="px-3 py-2 border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors flex items-center justify-center gap-1 text-xs font-semibold shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>{isAr ? 'حذف' : 'Delete'}</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
