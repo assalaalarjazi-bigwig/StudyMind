@@ -10,16 +10,13 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Register Service Worker for offline PWA functionality
-if ('serviceWorker' in navigator) {
+// Register Service Worker for offline PWA functionality (when supported and outside iframe sandbox)
+if ('serviceWorker' in navigator && typeof window !== 'undefined' && window.self === window.top) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('./sw.js')
-      .then((reg) => {
-        console.log('StudyMind ServiceWorker active:', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('StudyMind ServiceWorker registration skipped:', err);
+      .catch(() => {
+        // Gracefully ignore in non-PWA/restricted environments without console warning
       });
   });
 }

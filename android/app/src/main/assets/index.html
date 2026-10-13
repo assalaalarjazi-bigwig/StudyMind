@@ -5,14 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (function() {
+        // Prevent Vite dev client from attempting WebSocket connection in iframe sandbox where HMR is disabled
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var OrigWS = window.WebSocket;
+          window.WebSocket = function(url, protocols) {
+            var urlStr = String(url || '');
+            if (urlStr.indexOf('@vite') !== -1 || urlStr.indexOf('vite') !== -1 || urlStr.indexOf('ais-dev-') !== -1) {
+              return {
+                readyState: 3,
+                close: function() {},
+                send: function() {},
+                addEventListener: function(evt, handler) {
+                  if (evt === 'close') {
+                    setTimeout(function() {
+                      try { handler({ wasClean: true, code: 1000, reason: 'HMR disabled' }); } catch(e) {}
+                    }, 0);
+                  }
+                },
+                removeEventListener: function() {},
+              };
+            }
+            return new OrigWS(url, protocols);
+          };
+          window.WebSocket.prototype = OrigWS.prototype;
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
+        }
+
         var origError = console.error;
         console.error = function() {
-          var str = (arguments && arguments[0]) ? String(arguments[0]) : '';
-          if (str.indexOf('[vite] failed to connect to websocket') !== -1 || str.indexOf('WebSocket closed without opened') !== -1) {
-            return;
+          for (var i = 0; i < arguments.length; i++) {
+            var str = String(arguments[i] || '');
+            if (str.indexOf('[vite]') !== -1 || str.indexOf('websocket') !== -1 || str.indexOf('WebSocket') !== -1) {
+              return;
+            }
           }
           return origError.apply(console, arguments);
         };
+
+        var origWarn = console.warn;
+        console.warn = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var str = String(arguments[i] || '');
+            if (str.indexOf('ServiceWorker') !== -1 || str.indexOf('websocket') !== -1 || str.indexOf('WebSocket') !== -1) {
+              return;
+            }
+          }
+          return origWarn.apply(console, arguments);
+        };
+
         window.addEventListener('unhandledrejection', function(event) {
           var msg = (event && event.reason && (event.reason.message || event.reason.toString())) || '';
           if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1) {
@@ -36,8 +79,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="./assets/index-H_3egybi.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BYek2zZx.css">
+    <script type="module" crossorigin src="./assets/index-CRViQTVc.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bwx-ReAd.css">
   </head>
   <body>
     <div id="root"></div>
